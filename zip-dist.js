@@ -31,33 +31,9 @@ try {
   // 3. Initialize AdmZip instance
   const zip = new AdmZip();
 
-  // 4. Recursively read and add files
-  // We want files inside dist/ to be at the root of the zip archive.
-  // For example, dist/index.html becomes index.html inside the zip.
-  console.log('[ZIP ENGINE] Packing files from "dist" recursively into zip root...');
-  
-  function addDirectoryToZip(localPath, zipFolderPath = '') {
-    const items = fs.readdirSync(localPath);
-    
-    for (const item of items) {
-      const fullLocalPath = path.join(localPath, item);
-      const stat = fs.statSync(fullLocalPath);
-      const zipItemPath = zipFolderPath ? `${zipFolderPath}/${item}` : item;
-      
-      if (stat.isDirectory()) {
-        // Create directory entry and proceed recursively
-        zip.addFile(zipItemPath + '/', Buffer.alloc(0));
-        addDirectoryToZip(fullLocalPath, zipItemPath);
-      } else {
-        // Add file
-        const fileBuffer = fs.readFileSync(fullLocalPath);
-        zip.addFile(zipItemPath, fileBuffer);
-        console.log(`  -> Packed: ${zipItemPath} (${(fileBuffer.length / 1024).toFixed(2)} KB)`);
-      }
-    }
-  }
-
-  addDirectoryToZip(distDir);
+  // 4. Add the dist folder contents directly to zip root
+  console.log('[ZIP ENGINE] Packing files from "dist" using native folder compression...');
+  zip.addLocalFolder(distDir);
 
   // 5. Write Zip file
   console.log('[ZIP ENGINE] Writing zip file to disk...');
