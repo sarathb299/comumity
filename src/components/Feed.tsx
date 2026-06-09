@@ -10,6 +10,7 @@ import {
   Share2, Award, Bookmark, ShieldAlert, Check, HelpCircle, Eye, RefreshCw, BarChart2, Video 
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import SkeletonLoader from './SkeletonLoader';
 
 interface FeedProps {
   posts: Post[];
@@ -24,6 +25,7 @@ interface FeedProps {
   onToggleSave: (postId: string) => void;
   sortBy: string;
   setSortBy: (sort: string) => void;
+  isLoading?: boolean;
 }
 
 export default function Feed({
@@ -38,9 +40,19 @@ export default function Feed({
   savedState,
   onToggleSave,
   sortBy,
-  setSortBy
+  setSortBy,
+  isLoading = false
 }: FeedProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  if (isLoading) {
+    return (
+      <div id="feed-skeleton-container" className="flex-1 flex flex-col gap-6 font-sans">
+        <SkeletonLoader variant="feed-filter" idPrefix="feed-filter-sk" />
+        <SkeletonLoader variant="feed-item" idPrefix="feed-posts-sk" count={3} />
+      </div>
+    );
+  }
 
   const handleShare = (postId: string) => {
     // Write link sharing simulation

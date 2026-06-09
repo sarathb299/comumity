@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { Community, PostType, User, Post } from '../types';
 import { 
   Users, MapPin, Calendar, Globe, FileText, Image, 
@@ -39,6 +39,45 @@ export default function CommunityDetail({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   
+  // Draft autosave states
+  const [isDraftSaved, setIsDraftSaved] = useState(false);
+
+  // Load draft values on mount or community change
+  useEffect(() => {
+    const savedTitle = localStorage.getItem(`draft_post_title_${community.id}`);
+    const savedContent = localStorage.getItem(`draft_post_content_${community.id}`);
+    const savedTab = localStorage.getItem(`draft_post_tab_${community.id}`);
+    if (savedTitle) setTitle(savedTitle);
+    if (savedContent) setContent(savedContent);
+    if (savedTab) setActiveTab(savedTab as PostType);
+    if (savedTitle || savedContent) {
+      setIsDraftSaved(true);
+    }
+  }, [community.id]);
+
+  // Save changes to localStorage when modified
+  useEffect(() => {
+    if (title) {
+      localStorage.setItem(`draft_post_title_${community.id}`, title);
+    } else {
+      localStorage.removeItem(`draft_post_title_${community.id}`);
+    }
+    setIsDraftSaved(!!title || !!content);
+  }, [title, community.id]);
+
+  useEffect(() => {
+    if (content) {
+      localStorage.setItem(`draft_post_content_${community.id}`, content);
+    } else {
+      localStorage.removeItem(`draft_post_content_${community.id}`);
+    }
+    setIsDraftSaved(!!title || !!content);
+  }, [content, community.id]);
+
+  useEffect(() => {
+    localStorage.setItem(`draft_post_tab_${community.id}`, activeTab);
+  }, [activeTab, community.id]);
+
   // Custom metadata states
   const [inputImgUrl, setInputImgUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
@@ -127,6 +166,12 @@ export default function CommunityDetail({
       setPollOpts(['', '']);
       setAiVerdict(null);
       setShowCreateModal(false);
+
+      // Clear draft localStorage keys
+      localStorage.removeItem(`draft_post_title_${community.id}`);
+      localStorage.removeItem(`draft_post_content_${community.id}`);
+      localStorage.removeItem(`draft_post_tab_${community.id}`);
+      setIsDraftSaved(false);
     } catch (err: any) {
       setFormError(err.message || 'Verification Error. Check content rules.');
     } finally {
@@ -272,9 +317,17 @@ export default function CommunityDetail({
               <form onSubmit={handleSubmit} className="space-y-5 font-bold text-slate-705">
                 {/* Title */}
                 <div>
-                  <label htmlFor="post-title-input" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 font-display">
-                    Creative Post Title
-                  </label>
+                  <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
+                    <label htmlFor="post-title-input" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest font-display">
+                      Creative Post Title
+                    </label>
+                    {isDraftSaved && (
+                      <span className="text-[9px] text-emerald-600 font-extrabold bg-emerald-50 border-2 border-emerald-300 px-2.5 py-0.5 rounded-lg uppercase tracking-tight animate-pulse flex items-center gap-1.5 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] select-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Draft Auto-Saved
+                      </span>
+                    )}
+                  </div>
                   <input
                     id="post-title-input"
                     type="text"

@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Community, User } from '../types';
 import { Globe, ShieldAlert, Plus, Users, ArrowRight, Heart } from 'lucide-react';
+import SkeletonLoader from './SkeletonLoader';
 
 interface CommunitySidebarProps {
   communities: Community[];
@@ -14,6 +15,7 @@ interface CommunitySidebarProps {
   onSelectCommunity: (slug: string) => void;
   onJoinLeave: (communityId: string, join: boolean) => void;
   onCreateCommunityClick: () => void;
+  isLoading?: boolean;
 }
 
 export default function CommunitySidebar({
@@ -22,7 +24,8 @@ export default function CommunitySidebar({
   currentUser,
   onSelectCommunity,
   onJoinLeave,
-  onCreateCommunityClick
+  onCreateCommunityClick,
+  isLoading = false
 }: CommunitySidebarProps) {
   return (
     <aside id="community-sidebar" className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-6">
@@ -37,58 +40,62 @@ export default function CommunitySidebar({
         </div>
 
         <div className="flex flex-col gap-3.5">
-          {communities.filter(c => c.slug !== 'mods-only' || (currentUser?.role === 'ADMIN' || currentUser?.role === 'MODERATOR')).map((com) => {
-            const isJoined = joinedIds.includes(com.id);
-            const memberCount = com.membersCount || 1;
-            
-            // Map dynamic layout color tags
-            const themeMap: Record<string, string> = {
-              cyan: 'bg-cyan-100 text-cyan-700',
-              emerald: 'bg-emerald-100 text-emerald-700',
-              purple: 'bg-purple-100 text-purple-700',
-              amber: 'bg-amber-100 text-amber-700',
-              indigo: 'bg-indigo-100 text-indigo-700',
-            };
-            const cClass = themeMap[com.themeColor] || 'bg-slate-100 text-slate-705';
+          {isLoading ? (
+            <SkeletonLoader variant="community-sidebar-list" idPrefix="sidebar-community-sk" count={4} />
+          ) : (
+            communities.filter(c => c.slug !== 'mods-only' || (currentUser?.role === 'ADMIN' || currentUser?.role === 'MODERATOR')).map((com) => {
+              const isJoined = joinedIds.includes(com.id);
+              const memberCount = com.membersCount || 1;
+              
+              // Map dynamic layout color tags
+              const themeMap: Record<string, string> = {
+                cyan: 'bg-cyan-100 text-cyan-700',
+                emerald: 'bg-emerald-100 text-emerald-700',
+                purple: 'bg-purple-100 text-purple-700',
+                amber: 'bg-amber-100 text-amber-700',
+                indigo: 'bg-indigo-100 text-indigo-700',
+              };
+              const cClass = themeMap[com.themeColor] || 'bg-slate-100 text-slate-705';
 
-            return (
-              <div 
-                id={`sidebar-community-${com.slug}`}
-                key={com.id} 
-                className="flex items-center justify-between gap-3 group"
-              >
-                <button
-                  id={`sidebar-com-select-${com.slug}`}
-                  onClick={() => onSelectCommunity(com.slug)}
-                  className="flex items-center gap-3 text-left flex-1 min-w-0"
+              return (
+                <div 
+                  id={`sidebar-community-${com.slug}`}
+                  key={com.id} 
+                  className="flex items-center justify-between gap-3 group"
                 >
-                  <img src={com.logo} alt={com.name} className="w-9 h-9 rounded-xl object-cover border-2 border-slate-900 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] group-hover:scale-105 transition-all" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-black text-slate-900 truncate group-hover:text-orange-600 transition-all">
-                      h/{com.slug}
-                    </p>
-                    <p className="text-[10px] text-slate-500 font-bold">
-                      {memberCount} {memberCount === 1 ? 'member' : 'members'}
-                    </p>
-                  </div>
-                </button>
-
-                {currentUser && (
                   <button
-                    id={`sidebar-com-join-btn-${com.id}`}
-                    onClick={() => onJoinLeave(com.id, !isJoined)}
-                    className={`px-3 py-1 text-[10px] uppercase font-black rounded-lg border-2 border-slate-900 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] transition-all active:scale-95 cursor-pointer ${
-                      isJoined 
-                      ? 'bg-slate-200 hover:bg-slate-300 text-slate-700' 
-                      : 'bg-orange-600 hover:bg-orange-700 text-white'
-                    }`}
+                    id={`sidebar-com-select-${com.slug}`}
+                    onClick={() => onSelectCommunity(com.slug)}
+                    className="flex items-center gap-3 text-left flex-1 min-w-0"
                   >
-                    {isJoined ? 'Joined' : 'Join'}
+                    <img src={com.logo} alt={com.name} className="w-9 h-9 rounded-xl object-cover border-2 border-slate-900 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] group-hover:scale-105 transition-all" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-slate-900 truncate group-hover:text-orange-600 transition-all">
+                        h/{com.slug}
+                      </p>
+                      <p className="text-[10px] text-slate-500 font-bold">
+                        {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                      </p>
+                    </div>
                   </button>
-                )}
-              </div>
-            );
-          })}
+
+                  {currentUser && (
+                    <button
+                      id={`sidebar-com-join-btn-${com.id}`}
+                      onClick={() => onJoinLeave(com.id, !isJoined)}
+                      className={`px-3 py-1 text-[10px] uppercase font-black rounded-lg border-2 border-slate-900 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] transition-all active:scale-95 cursor-pointer ${
+                        isJoined 
+                        ? 'bg-slate-200 hover:bg-slate-300 text-slate-700' 
+                        : 'bg-orange-600 hover:bg-orange-700 text-white'
+                      }`}
+                    >
+                      {isJoined ? 'Joined' : 'Join'}
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
 
         {currentUser && (

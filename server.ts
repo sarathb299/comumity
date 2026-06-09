@@ -394,6 +394,54 @@ async function startServer() {
     res.json(db.getAnalytics());
   });
 
+  // Gemini TL;DR Summation Endpoint
+  app.post('/api/ai/tldr', async (req, res) => {
+    const { text, title } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'Post content is required for summation.' });
+    }
+
+    if (!ai) {
+      // Offline fallback: take the first sentence or part and create an elegant fallback
+      const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
+      const sentence = cleanText.split(/[.!?]+/)[0] || cleanText;
+      const fallbackSummary = sentence.length > 120 
+        ? `${sentence.substring(0, 115)}... (TL;DR loaded via smart fallback)`
+        : `${sentence}. (TL;DR loaded via smart fallback)`;
+      
+      return res.json({
+        summary: fallbackSummary,
+        isFallback: true
+      });
+    }
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: `Generate a brief, engaging "TL;DR" summary (maximum 2 sentences) for the following community forum post. Do not mention the word "TL;DR" in the generated summary, just synthesize the core argument or theme. Keep the tone friendly and professional.
+        
+        Title: "${title || ''}"
+        Content: "${text}"`,
+      });
+
+      const summary = response.text?.trim() || 'Unable to generate summary.';
+      res.json({
+        summary,
+        isFallback: false
+      });
+    } catch (err: any) {
+      console.error('Gemini API TL;DR error:', err);
+      const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
+      const sentence = cleanText.split(/[.!?]+/)[0] || cleanText;
+      const fallbackSummary = sentence.length > 120 ? `${sentence.substring(0, 115)}...` : sentence;
+      res.json({
+        summary: fallbackSummary,
+        isFallback: true,
+        error: err.message
+      });
+    }
+  });
+
   // Gemini Smart Moderation Assistant
   app.post('/api/ai/moderate', async (req, res) => {
     const { text, type } = req.body; // post or comment text

@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { Post, Comment, User, UserRole } from '../types';
 import { 
   ArrowBigUp, ArrowBigDown, ArrowLeft, Trash2, Eye, Flag, 
-  CornerDownRight, CheckCircle2, Copy, Send, Smile, ExternalLink, ShieldAlert 
+  CornerDownRight, CheckCircle2, Copy, Send, Smile, ExternalLink, ShieldAlert, Sparkles 
 } from 'lucide-react';
 
 interface PostViewProps {
@@ -41,6 +41,64 @@ export default function PostView({
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [reporting, setReporting] = useState(false);
 
+  // Gemini TL;DR states
+  const [tldr, setTldr] = useState<string | null>(null);
+  const [tldrLoading, setTldrLoading] = useState(false);
+  const [tldrError, setTldrError] = useState<string | null>(null);
+  const [isDraftAutosaved, setIsDraftAutosaved] = useState(false);
+
+  // Fetch TL;DR automatically for long text posts (> 100 characters)
+  useEffect(() => {
+    if (post.content && post.content.length > 100) {
+      const fetchTldrSummary = async () => {
+        setTldrLoading(true);
+        setTldrError(null);
+        try {
+          const res = await fetch('/api/ai/tldr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: post.content, title: post.title }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setTldr(data.summary);
+          } else {
+            setTldrError('Failed to fetch summary');
+          }
+        } catch (e) {
+          setTldrError('AI service currently unavailable');
+        } finally {
+          setTldrLoading(false);
+        }
+      };
+      void fetchTldrSummary();
+    } else {
+      setTldr(null);
+    }
+  }, [post.id, post.content, post.title]);
+
+  // Load comment draft from localStorage
+  useEffect(() => {
+    const savedText = localStorage.getItem(`draft_comment_post_${post.id}`);
+    if (savedText) {
+      setNewCommentText(savedText);
+      setIsDraftAutosaved(true);
+    } else {
+      setIsDraftAutosaved(false);
+    }
+  }, [post.id]);
+
+  // Save comment draft to localStorage
+  useEffect(() => {
+    if (newCommentText) {
+      localStorage.setItem(`draft_comment_post_${post.id}`, newCommentText);
+      setIsDraftAutosaved(true);
+    } else {
+      localStorage.removeItem(`draft_comment_post_${post.id}`);
+      setIsDraftAutosaved(false);
+    }
+  }, [newCommentText, post.id]);
+
   const handlePostMainComment = async (e: FormEvent) => {
     e.preventDefault();
     if (!newCommentText.trim()) return;
@@ -48,6 +106,8 @@ export default function PostView({
     try {
       await onSubmitComment(newCommentText.trim(), null);
       setNewCommentText('');
+      localStorage.removeItem(`draft_comment_post_${post.id}`);
+      setIsDraftAutosaved(false);
     } catch (e) {
       console.warn('Failed comment submission', e);
     }
@@ -206,7 +266,7 @@ export default function PostView({
   return (
     <div id="full-post-thread-container" className="flex-1 space-y-6 font-sans">
       
-      {/* Back button */}
+      {/* Return to Feed button */}
       <button
         id="post-view-back-btn"
         onClick={onBack}
@@ -215,6 +275,72 @@ export default function PostView({
         <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
         <span>Return to Feed list</span>
       </button>
+
+      {/* Gemini TL;DR Bento Card for long text posts */}
+      {post.content && post.content.length > 100 && (
+        <div 
+          id="post-tldr-card" 
+          className="bg-amber-50 rounded-3xl border-2 border-slate-900 p-5 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] relative overflow-hidden flex gap-4 items-start"
+        >
+          {/* Sparkly visual accent */}
+          <div className="absolute top-0 right-0 p-2.5 bg-slate-900 text-amber-300 rounded-bl-2xl border-l-2 border-b-2 border-slate-900 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span className="text-[9px] font-black uppercase tracking-wider font-mono">Gemini AI</span>
+          </div>
+
+          <div className="p-2.5 bg-amber-200 rounded-2xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] flex-shrink-0 text-slate-900">
+            <Sparkles className="w-4 h-4 stroke-[2.5]" />
+          </div>
+
+          <div className="space-y-1 my-0.5 flex-1 min-w-0 pr-16 md:pr-24">
+            <h4 className="text-[10px] font-mono font-black text-slate-500 uppercase tracking-widest">
+              AI Generated Post Summary
+            </h4>
+            
+            {tldrLoading ? (
+              <div className="space-y-2 mt-2 animate-pulse pointer-events-none">
+                <div className="h-3.5 bg-amber-250/50 rounded w-11/12 border border-amber-300" />
+                <div className="h-3 bg-amber-250/50 rounded w-4/5 border border-amber-300" />
+              </div>
+            ) : tldrError ? (
+              <div className="flex items-center gap-2 text-rose-800 font-bold text-xs mt-2">
+                <span>{tldrError}</span>
+                <button 
+                  type="button"
+                  onClick={async () => {
+                    setTldrLoading(true);
+                    setTldrError(null);
+                    try {
+                      const res = await fetch('/api/ai/tldr', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: post.content, title: post.title }),
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setTldr(data.summary);
+                      } else {
+                        setTldrError('Failed to fetch summary');
+                      }
+                    } catch (e) {
+                      setTldrError('AI service currently unavailable');
+                    } finally {
+                      setTldrLoading(false);
+                    }
+                  }}
+                  className="px-2.5 py-1 border-2 border-slate-900 rounded-lg bg-white hover:bg-slate-100 text-[9px] uppercase font-black tracking-tight cursor-pointer"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-900 font-bold leading-relaxed pr-2 mt-1 whitespace-pre-wrap">
+                {tldr || "Synthesizing briefing..."}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main post layout Card banner */}
       <div className="bg-white rounded-3xl border-2 border-slate-900 overflow-hidden shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
@@ -306,9 +432,17 @@ export default function PostView({
       {currentUser ? (
         <form onSubmit={handlePostMainComment} className="p-5 bg-white border-2 border-slate-900 rounded-3xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] flex gap-4 items-end font-sans">
           <div className="flex-1">
-            <label htmlFor="main-comment-input" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
-              Leave a Reply Comment
-            </label>
+            <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
+              <label htmlFor="main-comment-input" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                Leave a Reply Comment
+              </label>
+              {isDraftAutosaved && (
+                <span className="text-[9px] text-emerald-600 font-extrabold bg-emerald-50 border-2 border-emerald-300 px-2.5 py-0.5 rounded-lg uppercase tracking-tight animate-pulse flex items-center gap-1.5 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] select-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Draft Auto-Saved
+                </span>
+              )}
+            </div>
             <textarea
               id="main-comment-input"
               rows={2}

@@ -52,9 +52,11 @@ export default function App() {
   const [communityRules, setCommunityRules] = useState<string[]>(['No offensive talk', 'Provide useful context']);
   const [createComError, setCreateComError] = useState('');
   const [threadComments, setThreadComments] = useState<Comment[]>([]);
+  const [isFeedLoading, setIsFeedLoading] = useState(true);
 
   // Fetch posts and communities
   const loadPostsAndCommunities = async () => {
+    setIsFeedLoading(true);
     try {
       const pRes = await fetch(`/api/posts${currentUser ? `?userId=${currentUser.id}` : ''}`);
       const cRes = await fetch('/api/communities');
@@ -65,6 +67,10 @@ export default function App() {
       if (uRes.ok) setUsersList(await uRes.json());
     } catch (err) {
       console.warn('Backend connection issue:', err);
+    } finally {
+      setTimeout(() => {
+        setIsFeedLoading(false);
+      }, 600);
     }
   };
 
@@ -681,6 +687,7 @@ export default function App() {
                   onToggleSave={handleToggleSave}
                   sortBy={sortBy}
                   setSortBy={setSortBy}
+                  isLoading={isFeedLoading}
                 />
               </motion.div>
             )}
@@ -701,6 +708,7 @@ export default function App() {
             }}
             onJoinLeave={handleJoinLeaveCommunity}
             onCreateCommunityClick={() => setShowCreateCommunityModal(true)}
+            isLoading={isFeedLoading}
           />
         )}
 
