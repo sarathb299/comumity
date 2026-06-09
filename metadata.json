@@ -1,0 +1,6 @@
+{
+  "name": "CommunityHub",
+  "description": "A modern, highly polished community discussion and social forum platform similar to Reddit where users can create sub-communities, post topics, comment, upvote/downvote, message, earn karma, and moderate content.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
