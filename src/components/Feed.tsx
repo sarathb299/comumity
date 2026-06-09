@@ -44,6 +44,7 @@ export default function Feed({
   isLoading = false
 }: FeedProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activePlusOnes, setActivePlusOnes] = useState<Array<{ id: number; postId: string }>>([]);
 
   if (isLoading) {
     return (
@@ -55,11 +56,27 @@ export default function Feed({
   }
 
   const handleShare = (postId: string) => {
-    // Write link sharing simulation
     const fakeUrl = `${window.location.origin}/post/${postId}`;
     void navigator.clipboard.writeText(fakeUrl);
     setCopiedId(postId);
     setTimeout(() => setCopiedId(null), 2000);
+    // Trigger global Bento toast notification
+    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Link copied to clipboard!' } }));
+  };
+
+  const handleVoteWithAnim = (postId: string, voteType: number) => {
+    if (voteType === 1) {
+      const postItem = posts.find(p => p.id === postId);
+      const isUpvoting = postItem ? postItem.userVote !== 1 : true;
+      if (isUpvoting) {
+        const animId = Date.now() + Math.random();
+        setActivePlusOnes(prev => [...prev, { id: animId, postId }]);
+        setTimeout(() => {
+          setActivePlusOnes(prev => prev.filter(item => item.id !== animId));
+        }, 800);
+      }
+    }
+    onVote(postId, voteType);
   };
 
   return (
@@ -247,10 +264,23 @@ export default function Feed({
                 {/* Operations Footer Box */}
                 <div className="border-t-2 border-slate-900 bg-slate-50 px-5 py-2.5 flex items-center justify-between gap-4">
                   {/* Left segment: voting scores */}
-                  <div className="flex items-center gap-1.5 bg-white border-2 border-slate-900 rounded-xl p-0.5 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
+                  <div className="flex items-center gap-1.5 bg-white border-2 border-slate-900 rounded-xl p-0.5 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] relative">
+                    {/* Subtle Upvote Floating +1 Element */}
+                    {activePlusOnes.filter(item => item.postId === post.id).map(item => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 1, y: 0, scale: 0.8 }}
+                        animate={{ opacity: 0, y: -45, scale: 1.2 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="absolute -top-4 left-3 font-mono font-black text-orange-600 text-[13px] select-none pointer-events-none z-15 drop-shadow-[1px_1px_0px_rgba(15,23,42,1)]"
+                      >
+                        +1
+                      </motion.div>
+                    ))}
+
                     <button
                       id={`vote-up-${post.id}`}
-                      onClick={() => onVote(post.id, 1)}
+                      onClick={() => handleVoteWithAnim(post.id, 1)}
                       className={`p-1 rounded-lg transition-all active:scale-90 ${
                         post.userVote === 1 
                         ? 'text-white bg-orange-600' 
@@ -265,7 +295,7 @@ export default function Feed({
                     </span>
                     <button
                       id={`vote-down-${post.id}`}
-                      onClick={() => onVote(post.id, -1)}
+                      onClick={() => handleVoteWithAnim(post.id, -1)}
                       className={`p-1 rounded-lg transition-all active:scale-90 ${
                         post.userVote === -1 
                         ? 'text-white bg-indigo-600' 

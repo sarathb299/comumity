@@ -7,8 +7,9 @@ import { useState, useEffect, FormEvent } from 'react';
 import { Post, Comment, User, UserRole } from '../types';
 import { 
   ArrowBigUp, ArrowBigDown, ArrowLeft, Trash2, Eye, Flag, 
-  CornerDownRight, CheckCircle2, Copy, Send, Smile, ExternalLink, ShieldAlert, Sparkles 
+  CornerDownRight, CheckCircle2, Copy, Send, Smile, ExternalLink, ShieldAlert, Sparkles, Share2
 } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface PostViewProps {
   post: Post;
@@ -34,6 +35,29 @@ export default function PostView({
   onSubmitReport
 }: PostViewProps) {
   const [newCommentText, setNewCommentText] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [activePlusOnes, setActivePlusOnes] = useState<Array<{ id: number }>>([]);
+
+  const handleShare = () => {
+    const fakeUrl = `${window.location.origin}/post/${post.id}`;
+    void navigator.clipboard.writeText(fakeUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    // Dispatch global CustomEvent to show a Bento toast notification
+    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Link copied to clipboard!' } }));
+  };
+
+  const handleUpvoteAndAnim = () => {
+    const isUpvoting = post.userVote !== 1;
+    if (isUpvoting) {
+      const animId = Date.now() + Math.random();
+      setActivePlusOnes(prev => [...prev, { id: animId }]);
+      setTimeout(() => {
+        setActivePlusOnes(prev => prev.filter(item => item.id !== animId));
+      }, 850);
+    }
+    onVotePost(post.id, 1);
+  };
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [reportTarget, setReportTarget] = useState<{ type: 'POST' | 'COMMENT'; id: string } | null>(null);
@@ -401,24 +425,48 @@ export default function PostView({
         </div>
 
         {/* Voting row footer */}
-        <div className="border-t-2 border-slate-900 bg-slate-50 px-6 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-2 bg-white border-2 border-slate-900 rounded-xl p-0.5 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
+        <div className="border-t-2 border-slate-900 bg-slate-50 px-6 py-3 flex justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-white border-2 border-slate-900 rounded-xl p-0.5 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] relative">
+              {/* Subtle Upvote Floating +1 Element */}
+              {activePlusOnes.map(item => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 1, y: 0, scale: 0.8 }}
+                  animate={{ opacity: 0, y: -45, scale: 1.2 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute -top-4 left-3 font-mono font-black text-orange-600 text-[13px] select-none pointer-events-none z-15 drop-shadow-[1px_1px_0px_rgba(15,23,42,1)]"
+                >
+                  +1
+                </motion.div>
+              ))}
+
+              <button
+                id="post-view-vote-up"
+                onClick={handleUpvoteAndAnim}
+                className={`p-1.5 rounded-lg transition-all ${post.userVote === 1 ? 'text-orange-600 bg-orange-100' : 'text-slate-400 hover:text-slate-600'}`}
+                title="Upvote Post"
+              >
+                <ArrowBigUp className="w-5 h-5 fill-current stroke-[2.5]" />
+              </button>
+              <span className="text-xs font-black text-slate-900 font-mono px-1">{post.score}</span>
+              <button
+                id="post-view-vote-down"
+                onClick={() => onVotePost(post.id, -1)}
+                className={`p-1.5 rounded-lg transition-all ${post.userVote === -1 ? 'text-indigo-600 bg-indigo-100' : 'text-slate-400 hover:text-slate-600'}`}
+                title="Downvote Post"
+              >
+                <ArrowBigDown className="w-5 h-5 fill-current stroke-[2.5]" />
+              </button>
+            </div>
+
             <button
-              id="post-view-vote-up"
-              onClick={() => onVotePost(post.id, 1)}
-              className={`p-1.5 rounded-lg transition-all ${post.userVote === 1 ? 'text-orange-600 bg-orange-100' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Upvote Post"
+              id={`share-btn-view-${post.id}`}
+              onClick={handleShare}
+              className="px-3 py-1.5 rounded-xl bg-white border-2 border-slate-900 hover:bg-slate-100 text-slate-900 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] font-sans text-[11px] font-black flex items-center gap-1.5 transition-all cursor-pointer"
             >
-              <ArrowBigUp className="w-5 h-5 fill-current stroke-[2.5]" />
-            </button>
-            <span className="text-xs font-black text-slate-900 font-mono px-1">{post.score}</span>
-            <button
-              id="post-view-vote-down"
-              onClick={() => onVotePost(post.id, -1)}
-              className={`p-1.5 rounded-lg transition-all ${post.userVote === -1 ? 'text-indigo-600 bg-indigo-100' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Downvote Post"
-            >
-              <ArrowBigDown className="w-5 h-5 fill-current stroke-[2.5]" />
+              <Share2 className="w-4 h-4 text-slate-900 stroke-[2.5]" />
+              <span>{copied ? 'Copied!' : 'Share'}</span>
             </button>
           </div>
 

@@ -365,9 +365,9 @@ class DBManager {
 
   private async connectToMySql() {
     const host = process.env.DB_HOST || 'clickfused.com';
-    const user = process.env.DB_USER || 'u923048970_community_db';
+    const user = process.env.DB_USER || 'u923048970_community_data';
     const password = process.env.DB_PASSWORD || '@Sarath7094';
-    const database = process.env.DB_DATABASE || 'u923048970_community_db';
+    const database = process.env.DB_DATABASE || 'u923048970_community_data';
     const port = Number(process.env.DB_PORT) || 3306;
 
     console.log(`Connecting to MySQL Database [${database}] on ${host}:${port}...`);

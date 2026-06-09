@@ -35,6 +35,7 @@ export default function CommunityDetail({
   onSubmitPost
 }: CommunityDetailProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const [activeTab, setActiveTab] = useState<PostType>(PostType.TEXT);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -232,10 +233,10 @@ export default function CommunityDetail({
       </div>
 
       {/* Mini Description parameters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bento-card bg-white mt-4 mb-4 text-xs font-bold text-slate-800">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-5 bento-card bg-white mt-4 mb-4 text-xs font-bold text-slate-800">
         <div className="flex items-center gap-2">
           <Users className="w-4.5 h-4.5 text-slate-900 stroke-[2.5]" />
-          <span>{community.membersCount || 1} Community Members</span>
+          <span>{community.membersCount || 1} Members</span>
         </div>
         <div className="flex items-center gap-2">
           <Globe className="w-4.5 h-4.5 text-slate-900 stroke-[2.5]" />
@@ -243,8 +244,16 @@ export default function CommunityDetail({
         </div>
         <div className="flex items-center gap-2">
           <Calendar className="w-4.5 h-4.5 text-slate-900 stroke-[2.5]" />
-          <span>Active since {new Date(community.created_at).toLocaleDateString()}</span>
+          <span>Since {new Date(community.created_at).toLocaleDateString()}</span>
         </div>
+        <button
+          id="com-rules-modal-btn"
+          onClick={() => setShowRulesModal(true)}
+          className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-all font-black uppercase text-[11px] tracking-wide cursor-pointer text-left focus:outline-none hover:translate-x-1"
+        >
+          <FileText className="w-4.5 h-4.5 text-orange-600 stroke-[2.5]" />
+          <span>Rules Summary ➔</span>
+        </button>
       </div>
 
       {community.description && (
@@ -486,6 +495,66 @@ export default function CommunityDetail({
               </form>
 
             </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* --- COMMUNITY RULES MODAL --- */}
+      {showRulesModal && (
+        <div id="community-rules-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] w-full max-w-md font-sans text-xs overflow-hidden"
+          >
+            
+            <div className="p-6 bg-slate-900 text-white flex justify-between items-center border-b-2 border-slate-900">
+              <div>
+                <h3 className="text-sm font-display font-black text-white uppercase tracking-wider">Guidelines & Rules</h3>
+                <p className="text-[10px] text-slate-400">Maintained for h/{community.slug}</p>
+              </div>
+              <button 
+                id="close-rules-modal"
+                onClick={() => setShowRulesModal(false)}
+                className="text-slate-400 hover:text-white font-black text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="space-y-3 font-bold text-slate-705">
+                {(!community.rules || community.rules.length === 0) ? (
+                  <div className="p-4 bg-slate-50/50 border-2 border-slate-900 rounded-2xl flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-slate-900 stroke-[2.5] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-[11px] font-black text-slate-950 uppercase tracking-tight">Be Excellent to Each Other</h4>
+                      <p className="text-[11.5px] text-slate-500 mt-0.5 leading-relaxed">Please default to polite code/design dialogue, show mutual respect, avoid explicit marketing spam, and share constructive posts.</p>
+                    </div>
+                  </div>
+                ) : (
+                  community.rules.map((rule, idx) => (
+                    <div key={idx} className="p-4 bg-orange-50/50 border-2 border-slate-900 rounded-2xl flex items-start gap-3.5 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
+                      <div className="w-6 h-6 rounded-lg bg-orange-600 text-white flex items-center justify-center text-xs font-black border-2 border-slate-900 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] flex-shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11.5px] text-slate-900 leading-normal font-bold">{rule}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <button
+                id="rules-modal-ack"
+                onClick={() => setShowRulesModal(false)}
+                className="bento-button-primary w-full py-3 text-xs tracking-wide cursor-pointer uppercase font-black"
+              >
+                I Understand & Agree
+              </button>
+            </div>
+
           </motion.div>
         </div>
       )}

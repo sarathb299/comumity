@@ -53,6 +53,29 @@ export default function App() {
   const [createComError, setCreateComError] = useState('');
   const [threadComments, setThreadComments] = useState<Comment[]>([]);
   const [isFeedLoading, setIsFeedLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Global toast notification event listener
+  useEffect(() => {
+    const handleToastEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message: string }>;
+      if (customEvent.detail && customEvent.detail.message) {
+        setToastMessage(customEvent.detail.message);
+      }
+    };
+    window.addEventListener('app-toast', handleToastEvent);
+    return () => window.removeEventListener('app-toast', handleToastEvent);
+  }, []);
+
+  // Clear toast after a short delay
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   // Fetch posts and communities
   const loadPostsAndCommunities = async () => {
@@ -846,6 +869,24 @@ export default function App() {
           onClose={() => setShowAuthModal(false)}
         />
       )}
+
+      {/* Floating Toast Notification Container */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-white text-slate-950 px-5 py-3.5 border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] font-sans text-xs font-black uppercase tracking-wider min-w-[240px] pointer-events-none select-none"
+          >
+            <div className="p-1 bg-orange-100 border border-orange-300 rounded-lg text-orange-600 flex-shrink-0">
+              <CheckCircle2 className="w-4 h-4 stroke-[3]" />
+            </div>
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -416,13 +416,21 @@ async function startServer() {
     }
 
     try {
-      const response = await ai.models.generateContent({
+      const withTimeout = <T>(promise: Promise<T>, ms = 3800): Promise<T> => {
+        let timeoutId: NodeJS.Timeout;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(`API request timed out after ${ms}ms`)), ms);
+        });
+        return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+      };
+
+      const response = await withTimeout(ai.models.generateContent({
         model: 'gemini-3.5-flash',
         contents: `Generate a brief, engaging "TL;DR" summary (maximum 2 sentences) for the following community forum post. Do not mention the word "TL;DR" in the generated summary, just synthesize the core argument or theme. Keep the tone friendly and professional.
         
         Title: "${title || ''}"
         Content: "${text}"`,
-      });
+      }));
 
       const summary = response.text?.trim() || 'Unable to generate summary.';
       res.json({
@@ -430,14 +438,16 @@ async function startServer() {
         isFallback: false
       });
     } catch (err: any) {
-      console.error('Gemini API TL;DR error:', err);
+      console.warn('Gemini API TL;DR (handled fallback):', err.message || err);
       const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
       const sentence = cleanText.split(/[.!?]+/)[0] || cleanText;
-      const fallbackSummary = sentence.length > 120 ? `${sentence.substring(0, 115)}...` : sentence;
+      const fallbackSummary = sentence.length > 120 
+        ? `${sentence.substring(0, 115)}... (TL;DR loaded via smart fallback)`
+        : `${sentence}. (TL;DR loaded via smart fallback)`;
       res.json({
         summary: fallbackSummary,
         isFallback: true,
-        error: err.message
+        error: err.message || 'Timeout/Network issue'
       });
     }
   });
@@ -465,23 +475,31 @@ async function startServer() {
     }
 
     try {
-      const response = await ai.models.generateContent({
+      const withTimeout = <T>(promise: Promise<T>, ms = 3800): Promise<T> => {
+        let timeoutId: NodeJS.Timeout;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(`API request timed out after ${ms}ms`)), ms);
+        });
+        return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+      };
+
+      const response = await withTimeout(ai.models.generateContent({
         model: 'gemini-3.5-flash',
         contents: `Evaluate the following community ${type || 'content'} for safety, toxicity, spam, and guideline violations. Be balanced. Return ONLY a valid JSON string containing the fields "verdict" (Approved or Flagged), "rating" (SAFE, SPAM, TOXIC, or ADULT), and "reasoning" (one sentence description). 
         Content to check: "${text}"`,
         config: {
           responseMimeType: 'application/json'
         }
-      });
+      }));
 
       const parsedStr = response.text?.trim() || '{}';
       res.json(JSON.parse(parsedStr));
     } catch (err: any) {
-      console.error('Gemini AI Moderation Error:', err);
+      console.warn('Gemini AI Moderation (handled fallback):', err.message || err);
       res.json({
         verdict: 'Approved',
         rating: 'SAFE',
-        reasoning: 'Error running Gemini engine, fell back to auto-approval: ' + err.message
+        reasoning: 'Error running Gemini engine, fell back to auto-approval: ' + (err.message || err)
       });
     }
   });
