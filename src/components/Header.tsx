@@ -36,7 +36,28 @@ export default function Header({
     onSearchChange(search);
   }, [search]);
 
-  // Refetch notifications & database status periodically
+  // Poll database status periodically (independent of currentUser)
+  useEffect(() => {
+    const getDbStatus = async () => {
+      try {
+        const res = await fetch(`/api/db-get-status`);
+        if (res.ok) {
+          const status = await res.json();
+          setDbStatus(status);
+        }
+      } catch (e) {
+        console.warn('Failed to load database status', e);
+      }
+    };
+
+    void getDbStatus();
+    const id = setInterval(() => {
+      void getDbStatus();
+    }, 10000); // Poll database status every 10 seconds
+    return () => clearInterval(id);
+  }, []);
+
+  // Refetch notifications periodically when currentUser is active
   useEffect(() => {
     if (currentUser) {
       const getNotifications = async () => {
@@ -51,25 +72,13 @@ export default function Header({
         }
       };
 
-      const getDbStatus = async () => {
-        try {
-          const res = await fetch(`/api/db-get-status`);
-          if (res.ok) {
-            const status = await res.json();
-            setDbStatus(status);
-          }
-        } catch (e) {
-          console.warn(e);
-        }
-      };
-
       void getNotifications();
-      void getDbStatus();
-
       const id = setInterval(() => {
         void getNotifications();
       }, 7000);
       return () => clearInterval(id);
+    } else {
+      setNotifs([]);
     }
   }, [currentUser]);
 
@@ -126,11 +135,16 @@ export default function Header({
         <div className="flex items-center gap-3">
           
           {/* MySQL Indicators */}
-          {currentUser && dbStatus && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-white border-2 border-slate-900 rounded-xl shadow-[1px_1px_0px_0px_rgba(15,23,42,1)]">
-              <div className={`w-2 h-2 rounded-full ${dbStatus.isFallback ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
-              <span className="text-[10px] font-mono font-black text-slate-750 uppercase">
-                {dbStatus.isFallback ? 'Local' : 'MySQL Live'}
+          {dbStatus && (
+            <div 
+              id="header-db-indicator" 
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-white border-2 border-slate-900 rounded-xl shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] hover:bg-slate-50 transition-all cursor-help"
+              title={dbStatus.statusMessage}
+            >
+              <Database className={`w-3.5 h-3.5 stroke-[2.5] ${dbStatus.isFallback ? 'text-amber-500' : 'text-emerald-650'}`} />
+              <div className={`w-1.5 h-1.5 rounded-full ${dbStatus.isFallback ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
+              <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-800 uppercase tracking-tighter sm:tracking-normal">
+                {dbStatus.isFallback ? 'Local DB' : 'MySQL Connected'}
               </span>
             </div>
           )}

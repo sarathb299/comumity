@@ -152,9 +152,24 @@ export default function AdminPanel({ currentUser, onNavigate }: AdminPanelProps)
               {dbStatus.statusMessage}
             </p>
             {dbStatus.isFallback && (
-              <div className="bg-white/85 border-2 border-amber-900 rounded-xl p-3 mt-2 font-bold text-[11px] text-slate-800 leading-relaxed max-w-2xl space-y-1 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)]">
-                <span className="font-extrabold text-amber-800 uppercase tracking-widest text-[9px] block mb-1">🔌 Connect External MySQL Instruction:</span>
-                <p>The container currently runs high-performance locally persisted files. To link your external cPanel MySQL server on <code className="bg-slate-100 text-red-650 px-1 font-mono rounded font-bold">clickfused.com</code>, make sure to enable whitelisting for Cloud Run inbound traffic or configure <code className="bg-slate-100 text-indigo-600 px-1 font-mono rounded font-bold">%</code> for remote access hosts under cPanel Access Hosts. Then, add active <code className="bg-slate-100 text-indigo-600 px-1 font-mono rounded font-bold">DB_PASSWORD</code>, user and database parameters to variables settings!</p>
+              <div className="bg-white/95 border-2 border-amber-900 rounded-2xl p-4.5 mt-2.5 font-sans text-xs text-slate-800 leading-relaxed max-w-2xl space-y-2.5 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
+                <span className="font-black text-amber-800 uppercase tracking-widest text-[10px] block border-b border-amber-900/25 pb-1">⚡ How to Solve Hostinger / phpMyAdmin Remote Connection Issues:</span>
+                <p className="font-bold text-slate-700">Hostinger blocks database requests from external servers (this App container) by default. Follow these steps to grant permission:</p>
+                <ol className="list-decimal pl-5 space-y-1.5 font-bold text-slate-700">
+                  <li>Log in to your <span className="text-amber-900">Hostinger hPanel</span> dashboard.</li>
+                  <li>In the sidebar, navigate to <span className="text-amber-900">Databases</span> &gt; <span className="text-amber-900">Remote MySQL</span>.</li>
+                  <li>In the <span className="font-extrabold text-slate-900">IP (IPv4 or IPv6) or Host</span> field, enter:
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>Type <code className="bg-slate-100 text-indigo-700 font-mono px-1.5 py-0.5 rounded font-black">%</code> (this acts as a wildcard, allowing connections from any IP - highly recommended as cloud addresses spin up dynamically).</li>
+                      <li>Or, type <code className="bg-slate-100 text-indigo-700 font-mono px-1.5 py-0.5 rounded font-black">2600:1900:0:3803::f00</code> to authorize this specific container node alone.</li>
+                    </ul>
+                  </li>
+                  <li>Choose the database <code className="bg-slate-100 text-slate-900 font-mono px-1 rounded font-black">u923048970_community_data</code> in the dropdown selection.</li>
+                  <li>Click <span className="bg-emerald-600 text-white px-2 py-0.5 rounded text-[10px] font-black uppercase">Create</span> / <span className="bg-emerald-600 text-white px-2 py-0.5 rounded text-[10px] font-black uppercase">Add Host</span> to save.</li>
+                </ol>
+                <div className="pt-1.5 border-t border-amber-900/25 text-[11px] text-slate-500 font-medium">
+                  Once set up, Hostinger-hosted phpMyAdmin will seamlessly allow secure queries from this app. In the meantime, the application continues to run on a fully featured, locally persistent JSON backup!
+                </div>
               </div>
             )}
           </div>

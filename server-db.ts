@@ -6,12 +6,16 @@
 import fs from 'fs';
 import path from 'path';
 import mysql, { Connection } from 'mysql2/promise';
+import dotenv from 'dotenv';
 import { 
   User, UserRole, UserStatus, 
   Community, CommunityPrivacy, 
   Post, PostType, Comment, Vote, 
   Notification, Message, Report, CommunityMember, PlatformAnalytics 
 } from './src/types';
+
+// Load environmental variables and override platform-level ones if .env exists
+dotenv.config({ path: path.join(process.cwd(), '.env'), override: true });
 
 const DB_FILE = path.join(process.cwd(), 'database.json');
 
@@ -370,7 +374,14 @@ class DBManager {
     const database = process.env.DB_DATABASE || 'u923048970_community_data';
     const port = Number(process.env.DB_PORT) || 3306;
 
-    console.log(`Connecting to MySQL Database [${database}] on ${host}:${port}...`);
+    console.log('[DB DIAGNOSTIC] Initiating MySQL connection flow...');
+    console.log('[DB DIAGNOSTIC] Loaded credentials configuration:');
+    console.log(`[DB DIAGNOSTIC]   Host:     "${host}"`);
+    console.log(`[DB DIAGNOSTIC]   Port:     ${port}`);
+    console.log(`[DB DIAGNOSTIC]   User:     "${user}"`);
+    console.log(`[DB DIAGNOSTIC]   Database: "${database}"`);
+    console.log(`[DB DIAGNOSTIC]   Password: "${password ? '*** (length: ' + password.length + ')' : '<EMPTY>'}"`);
+
     try {
       // Connect to MySQL with a timeout to avoid blocking startup for more than 4 seconds
       const conn = await mysql.createConnection({
@@ -385,15 +396,34 @@ class DBManager {
       this.mySqlConnection = conn;
       this.isFallBackToLocal = false;
       this.connectionStatusMessage = `Connected to MySQL database [${database}] successfully!`;
-      console.log(this.connectionStatusMessage);
+      console.log(`[DB DIAGNOSTIC] SUCCESS: ${this.connectionStatusMessage}`);
 
       // Initialize Tables inside MySQL if not exists
       await this.initializeMySqlTables(conn);
     } catch (err: any) {
       this.isFallBackToLocal = true;
+      
+      let debugAdvisory = '';
+      if (err.code === 'ER_ACCESS_DENIED_ERROR') {
+        debugAdvisory = '\n>>> [HELP - Hostinger Access Denied]: Hostinger has rejected these credentials. Double check that:\n' +
+                        '  1. The DB_USER and DB_DATABASE exist and match exactly.\n' +
+                        '  2. The DB_PASSWORD is correct.\n' +
+                        '  3. You have configured Hostinger Remote MySQL to allow access.\n' +
+                        '     In hPanel -> Databases -> Remote MySQL, choose database "u923048970_community_data" and enter "%" or the specific IPv6 "2600:1900:0:3803::f00" then create/save!';
+      } else if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
+        debugAdvisory = `\n>>> [HELP - Network Resolution]: The database host "${host}" could not be resolved. Please verify your host DNS.`;
+      } else if (err.code === 'ETIMEDOUT' || err.connectTimeout) {
+        debugAdvisory = `\n>>> [HELP - Timeout]: Connection to "${host}" on port ${port} timed out.\n` +
+                        '  - Hostinger firewalls drop external connection attempts rather than rejecting them immediately if the calling IP isn\'t whitelisted.\n' +
+                        '  - Please whitelist the inbound IP node or set Host Remote Host to "%" (any IP) inside your Hostinger Remote MySQL portal!';
+      } else {
+        debugAdvisory = `\n>>> [HELP - Generic Connection Error]: Code: ${err.code || 'UNKNOWN'}. Full message: ${err.message || err}`;
+      }
+
       this.connectionStatusMessage = `Connection to MySQL failed: ${err.message || 'Timeout'}. Gracefully falling back to integrated persistent JSON database.`;
-      console.warn(this.connectionStatusMessage);
-      console.log('Applet operates normally with 100% features using local storage fallback database.');
+      console.error(`[DB DIAGNOSTIC] EXCEPTION CAUSE: ${err.code || 'ERROR'} - ${err.message}`);
+      console.error(debugAdvisory);
+      console.warn(`[DB DIAGNOSTIC] FALLBACK ENGAGED: Applet has fallen back to local storage ("${DB_FILE}"). Fully functional local JSON database active.`);
     }
   }
 

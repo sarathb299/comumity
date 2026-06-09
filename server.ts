@@ -5,6 +5,10 @@
 
 import express from 'express';
 import path from 'path';
+import dotenv from 'dotenv';
+// Load environment variables immediately before modules load
+dotenv.config({ path: path.join(process.cwd(), '.env'), override: true });
+
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { db } from './server-db';
@@ -36,6 +40,16 @@ async function startServer() {
   // Database Connection Status
   app.get('/api/db-get-status', (req, res) => {
     res.json(db.getStatus());
+  });
+
+  // Database Connection Health Check
+  app.get('/api/db-health', (req, res) => {
+    const status = db.getStatus();
+    if (!status.isFallback) {
+      res.json({ status: 'success', active: true, message: 'MySQL connection is live and healthy!' });
+    } else {
+      res.status(503).json({ status: 'fallback', active: false, message: 'Fell back to local storage backup database.' });
+    }
   });
 
   // Auth Endpoints
